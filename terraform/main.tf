@@ -9,6 +9,29 @@ data "aws_vpc" "default" {
     default = true
 }
 
+resource "aws_security_group" "default" {
+  name = "rds_postgresql_sg"
+
+  description = "RDS postgres servers (terraform-managed)"
+  vpc_id = data.aws_vpc.default.id
+
+  # Only postgres in
+  ingress {
+    from_port = 5432
+    to_port = 5432
+    protocol = "tcp"
+    cidr_blocks = ["201.81.79.104/32"]
+  }
+
+  # Allow all outbound traffic.
+  egress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
 data "aws_subnet_ids" "all" {
     vpc_id = data.aws_vpc.default.id
 }
@@ -25,6 +48,7 @@ resource "aws_rds_cluster" "default" {
     preferred_backup_window = "07:00-09:00"
     apply_immediately = true
     skip_final_snapshot = true
+    vpc_security_group_ids   = ["${aws_security_group.default.id}"]
 }
 
 resource "aws_rds_cluster_instance" "cluster_instances" {
